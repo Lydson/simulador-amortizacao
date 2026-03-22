@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador SAC vs PRICE · by Lydson</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #0e1120;
+  --surf:     #141728;
+  --surf2:    #1b1f35;
+  --bdr:      #252b47;
+  --text:     #e8eaf6;
+  --muted:    #6b74a8;
+  --sac:      #6c8fff;
+  --price:    #a78bfa;
+  --accent:   #5b7fff;
+  --acl:      #8ca8ff;
+  --green:    #4ade80;
+  --warn:     #fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 70% 55% at 15% -5%,rgba(91,127,255,.10) 0%,transparent 60%),
+  radial-gradient(ellipse 55% 45% at 85% 105%,rgba(108,143,255,.07) 0%,transparent 55%),
+  radial-gradient(circle 300px at 90% 10%,rgba(167,139,250,.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;}
+.wrap{max-width:980px;margin:0 auto;padding:52px 24px 88px;position:relative;z-index:1;}
+
+/* Header */
+header{margin-bottom:40px;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+h1{font-size:clamp(30px,5vw,50px);font-weight:700;letter-spacing:-.03em;line-height:1.1;}
+h1 .vs{color:var(--acl);font-weight:300;}
+.sub{margin-top:10px;font-size:14px;color:var(--muted);max-width:500px;font-weight:300;}
+
+/* Presets */
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
+.plabel{font-size:11px;color:var(--muted);font-weight:500;}
+.pbtn{background:var(--surf2);border:1px solid var(--bdr);border-radius:20px;padding:6px 16px;
+  font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .2s;font-family:'Sora',sans-serif;}
+.pbtn:hover,.pbtn.active{border-color:var(--accent);color:var(--acl);background:rgba(91,127,255,.08);}
+
+/* Card */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:28px;margin-bottom:20px;}
+.ctitle{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:22px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+@media(max-width:640px){.g3{grid-template-columns:1fr;}}
+
+.field label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:6px;letter-spacing:.04em;}
+.field input{width:100%;background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;
+  padding:11px 14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;}
+.field input:focus{border-color:var(--accent);}
+.hint{font-size:10px;color:var(--muted);margin-top:4px;}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);
+  color:#fff;border:none;border-radius:12px;padding:13px 28px;font-family:'Sora',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;width:100%;}
+.btn:hover{opacity:.85;}
+.btn:active{transform:scale(.98);}
+
+/* Results */
+#results{display:none;}
+
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+@media(max-width:560px){.sg{grid-template-columns:1fr;}}
+
+.sc{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:24px;position:relative;overflow:hidden;}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sc.s::after{background:linear-gradient(90deg,var(--sac),var(--acl));}
+.sc.p::after{background:linear-gradient(90deg,var(--price),#c4b5fd);}
+.stag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:18px;}
+.sc.s .stag{color:var(--sac);}
+.sc.p .stag{color:var(--price);}
+.met{margin-bottom:13px;}
+.mlbl{font-size:10px;color:var(--muted);margin-bottom:2px;letter-spacing:.03em;}
+.mval{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;}
+.sc.s .mval.ac{color:var(--sac);}
+.sc.p .mval.ac{color:var(--price);}
+.mval.nt{color:var(--text);font-size:14px;}
+
+.insight{background:rgba(91,127,255,.07);border:1px solid rgba(91,127,255,.25);border-radius:12px;
+  padding:14px 18px;font-size:13px;color:var(--muted);margin-bottom:20px;}
+.insight strong{color:var(--text);}
+
+/* Chart */
+.cc{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:28px;margin-bottom:20px;}
+.ch{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.cttl{font-size:16px;font-weight:600;}
+.legend{display:flex;gap:14px;}
+.li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.ld{width:8px;height:8px;border-radius:50%;}
+canvas{max-height:280px;}
+
+.tabs{display:flex;gap:4px;background:var(--surf2);border-radius:10px;padding:4px;width:fit-content;margin-bottom:18px;}
+.tab{background:none;border:none;padding:6px 15px;border-radius:7px;font-size:11px;font-weight:500;
+  color:var(--muted);cursor:pointer;transition:all .2s;font-family:'Sora',sans-serif;}
+.tab.active{background:var(--surf);color:var(--text);border:1px solid var(--bdr);}
+
+/* Table */
+.tw{overflow-x:auto;border-radius:12px;border:1px solid var(--bdr);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--surf2);padding:11px 14px;text-align:right;
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:400;white-space:nowrap;}
+thead th:first-child{text-align:center;}
+tbody tr{border-top:1px solid var(--bdr);transition:background .15s;}
+tbody tr:hover{background:var(--surf2);}
+tbody td{padding:10px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+tbody td:first-child{text-align:center;color:var(--text);font-weight:500;}
+.sv{color:var(--sac)!important;}
+.pv{color:var(--price)!important;}
+
+.pag{display:flex;align-items:center;justify-content:space-between;padding:14px 0 0;font-size:12px;color:var(--muted);}
+.pbtns{display:flex;gap:8px;}
+.pbtn2{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:6px 13px;
+  color:var(--text);font-size:11px;cursor:pointer;font-family:'Sora',sans-serif;transition:border-color .2s;}
+.pbtn2:disabled{opacity:.3;cursor:default;}
+.pbtn2:not(:disabled):hover{border-color:var(--accent);}
+
+/* Conclusion */
+.concl{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:28px;margin-bottom:20px;}
+.concl h2{font-size:18px;font-weight:600;margin-bottom:4px;}
+.csub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.cwinner{display:inline-flex;align-items:center;gap:8px;background:rgba(74,222,128,.08);
+  border:1px solid rgba(74,222,128,.25);border-radius:10px;padding:10px 16px;
+  margin-bottom:18px;font-size:13px;font-weight:600;color:var(--green);}
+.citems{display:flex;flex-direction:column;gap:10px;}
+.ci{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.5;}
+.ci .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:7px;flex-shrink:0;}
+.ci strong{color:var(--text);}
+.ctip{margin-top:18px;padding:14px 16px;background:rgba(251,191,36,.06);
+  border:1px solid rgba(251,191,36,.2);border-radius:10px;font-size:12px;color:#d9ac4e;line-height:1.6;}
+.ctip strong{color:var(--warn);}
+
+/* Footer */
+footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--bdr);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.ftby{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
+.ftby a{color:var(--acl);text-decoration:none;font-weight:500;transition:color .2s;}
+.ftby a:hover{color:#fff;}
+.badge{font-size:10px;padding:4px 10px;border-radius:20px;background:var(--surf2);
+  border:1px solid var(--bdr);color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.08em;}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.an{animation:fadeUp .4s ease both;}
+.d1{animation-delay:.07s;}.d2{animation-delay:.14s;}.d3{animation-delay:.21s;}
+.d4{animation-delay:.28s;}.d5{animation-delay:.35s;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="an">
+  <div class="eyebrow">· Simulador de Amortização</div>
+  <h1>SAC <span class="vs">vs</span> PRICE</h1>
+  <p class="sub">Compare as duas tabelas e descubra qual economiza mais — com ou sem amortizações extras.</p>
+</header>
+
+<div class="presets an d1">
+  <span class="plabel">Carregar exemplo:</span>
+  <button class="pbtn" onclick="loadPreset('mcmv',this)">🏠 Minha Casa Minha Vida</button>
+  <button class="pbtn" onclick="loadPreset('medio',this)">🏢 Médio padrão</button>
+  <button class="pbtn" onclick="loadPreset('alto',this)">🏙️ Alto padrão</button>
+</div>
+
+<div class="card an d1">
+  <div class="ctitle">Parâmetros do financiamento</div>
+  <div class="g3" style="margin-bottom:16px">
+    <div class="field">
+      <label>Valor do imóvel (R$)</label>
+      <input type="number" id="vi" value="350000" min="0">
+    </div>
+    <div class="field">
+      <label>Entrada (R$)</label>
+      <input type="number" id="ent" value="80000" min="0">
+    </div>
+    <div class="field">
+      <label>Taxa de juros anual (%)</label>
+      <input type="number" id="ta" value="11.5" step="0.01" min="0">
+      <div class="hint">MCMV 2025: ~7,66% a.a. (faixa 3)</div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="field">
+      <label>Prazo (meses)</label>
+      <input type="number" id="pz" value="420" min="12" max="420">
+      <div class="hint">Máx. MCMV: 360 meses (30 anos)</div>
+    </div>
+    <div class="field">
+      <label>Amortização extra/mês (R$)</label>
+      <input type="number" id="ex" value="0" min="0" placeholder="0">
+      <div class="hint">Opcional — reduz prazo e juros</div>
+    </div>
+    <div class="field" style="display:flex;align-items:flex-end">
+      <button class="btn" onclick="calcular()">Calcular →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="results">
+
+  <div class="insight an" id="insBanner"></div>
+
+  <div class="sg">
+    <div class="sc s an d1">
+      <div class="stag">● Tabela SAC</div>
+      <div class="met"><div class="mlbl">Primeira parcela</div><div class="mval ac" id="s1">—</div></div>
+      <div class="met"><div class="mlbl">Última parcela</div><div class="mval ac" id="sn">—</div></div>
+      <div class="met"><div class="mlbl">Total de juros</div><div class="mval ac" id="sj">—</div></div>
+      <div class="met"><div class="mlbl">Total pago</div><div class="mval nt" id="st">—</div></div>
+      <div class="met"><div class="mlbl">Prazo efetivo</div><div class="mval nt" id="sp">—</div></div>
+    </div>
+    <div class="sc p an d2">
+      <div class="stag">● Tabela PRICE</div>
+      <div class="met"><div class="mlbl">Parcela fixa</div><div class="mval ac" id="p1">—</div></div>
+      <div class="met"><div class="mlbl">&nbsp;</div><div class="mval" style="opacity:0">—</div></div>
+      <div class="met"><div class="mlbl">Total de juros</div><div class="mval ac" id="pj">—</div></div>
+      <div class="met"><div class="mlbl">Total pago</div><div class="mval nt" id="pt">—</div></div>
+      <div class="met"><div class="mlbl">Prazo efetivo</div><div class="mval nt" id="pp">—</div></div>
+    </div>
+  </div>
+
+  <div class="cc an d3">
+    <div class="ch">
+      <div class="cttl">Evolução do financiamento</div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:var(--sac)"></div>SAC</div>
+        <div class="li"><div class="ld" style="background:var(--price)"></div>PRICE</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="swChart('saldo',this)">Saldo devedor</button>
+      <button class="tab" onclick="swChart('parcela',this)">Parcela</button>
+      <button class="tab" onclick="swChart('jac',this)">Juros acumulados</button>
+    </div>
+    <canvas id="mainChart"></canvas>
+  </div>
+
+  <!-- Conclusion -->
+  <div class="concl an d4">
+    <h2>📊 Conclusão</h2>
+    <p class="csub">Análise automática com base nos parâmetros simulados</p>
+    <div class="cwinner" id="cwin">—</div>
+    <div class="citems" id="citems"></div>
+    <div class="ctip" id="ctip"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="cc an d5">
+    <div class="ch"><div class="cttl">Tabela mensal detalhada</div></div>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th>Parcela SAC</th><th>Juros SAC</th><th>Amort. SAC</th><th>Saldo SAC</th>
+            <th>Parcela PRICE</th><th>Juros PRICE</th><th>Amort. PRICE</th><th>Saldo PRICE</th>
+          </tr>
+        </thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+    <div class="pag">
+      <span id="pagInfo"></span>
+      <div class="pbtns">
+        <button class="pbtn2" id="bPrev" onclick="chPage(-1)" disabled>← Anterior</button>
+        <button class="pbtn2" id="bNext" onclick="chPage(1)">Próximo →</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /results -->
+
+<footer>
+  <div class="ftby">Made by <a href="https://www.linkedin.com/in/lydson/" target="_blank" rel="noopener">Lydson</a></div>
+  <span class="badge">SAC · PRICE · AMORTIZAÇÃO</span>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+/* ─── State ─── */
+let sacD=[], priceD=[], chartInst=null, page=0, cType='saldo';
+const PS=12;
+
+/* ─── Helpers ─── */
+const fmt = v => 'R$ '+v.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const fmtM = m => {
+  const y=Math.floor(m/12), mo=m%12;
+  if(y===0) return `${m} meses`;
+  if(mo===0) return `${y} ano${y>1?'s':''}`;
+  return `${y} ano${y>1?'s':''} e ${mo} ${mo===1?'mês':'meses'}`;
+};
+const set = (id, v) => document.getElementById(id).textContent = v;
+
+/* ─── Presets ─── */
+const PRESETS = {
+  mcmv:  {vi:200000, ent:40000,  ta:10.5,  pz:360, ex:0},
+  medio: {vi:350000, ent:80000,  ta:11.5,  pz:420, ex:0},
+  alto:  {vi:900000, ent:180000, ta:11.5,  pz:420, ex:0},
+};
+function loadPreset(k, btn) {
+  const p=PRESETS[k];
+  document.getElementById('vi').value=p.vi;
+  document.getElementById('ent').value=p.ent;
+  document.getElementById('ta').value=p.ta;
+  document.getElementById('pz').value=p.pz;
+  document.getElementById('ex').value=p.ex;
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  calcular();
+}
+
+/* ─── SAC ───────────────────────────────────────────────
+   Amortização constante = PV / n  (sempre a mesma)
+   Juros do mês = saldo_devedor × i  (decresce todo mês)
+   Parcela = amort_constante + juros  (decresce todo mês)
+   Com extra: amort total = amort_base + extra  (antecipa fim)
+──────────────────────────────────────────────────────── */
+function calcSAC(pv, i, n, extra) {
+  const amortBase = pv / n;
+  let saldo = pv;
+  const rows = [];
+  for (let m=1; m<=n && saldo>0.005; m++) {
+    const juros = saldo * i;
+    const amort = Math.min(amortBase + extra, saldo);
+    const parcela = juros + amort;
+    saldo = Math.max(0, saldo - amort);
+    rows.push({mes:m, parcela, juros, amort, saldo});
+  }
+  return rows;
+}
+
+/* ─── PRICE ─────────────────────────────────────────────
+   Parcela fixa = PV × [i(1+i)^n] / [(1+i)^n − 1]
+   Juros do mês = saldo_devedor × i
+   Amortização = parcela_fixa − juros  (cresce todo mês — juros menores)
+   Com extra: amort total = amort_base + extra  (prazo cai, parcela não muda)
+──────────────────────────────────────────────────────── */
+function calcPRICE(pv, i, n, extra) {
+  const factor = Math.pow(1+i, n);
+  const parcelaBase = pv * (i * factor) / (factor - 1);
+  let saldo = pv;
+  const rows = [];
+  for (let m=1; m<=n && saldo>0.005; m++) {
+    const juros   = saldo * i;
+    const amortOrd = parcelaBase - juros;          // amortização ordinária
+    const amort   = Math.min(amortOrd + extra, saldo);
+    const parcela = juros + amort;                 // igual a parcelaBase exceto no último mês
+    saldo = Math.max(0, saldo - amort);
+    rows.push({mes:m, parcela, juros, amort, saldo});
+  }
+  return rows;
+}
+
+/* ─── Calculate ─── */
+function calcular() {
+  const vi  = parseFloat(document.getElementById('vi').value)  || 0;
+  const ent = parseFloat(document.getElementById('ent').value) || 0;
+  const ta  = parseFloat(document.getElementById('ta').value)  || 0;
+  const n   = parseInt(document.getElementById('pz').value)    || 360;
+  const ex  = parseFloat(document.getElementById('ex').value)  || 0;
+
+  const pv = vi - ent;
+  const i  = ta / 100 / 12;   // taxa mensal: (taxa_anual / 12)
+
+  if (pv <= 0) { alert('O valor financiado (imóvel − entrada) deve ser maior que zero.'); return; }
+  if (i  <= 0) { alert('Informe uma taxa de juros válida.'); return; }
+  if (n  <= 0) { alert('Informe um prazo válido.'); return; }
+
+  sacD   = calcSAC(pv, i, n, ex);
+  priceD = calcPRICE(pv, i, n, ex);
+
+  const sacJ   = sacD.reduce((s,r)=>s+r.juros,0);
+  const priceJ = priceD.reduce((s,r)=>s+r.juros,0);
+  const sacTot   = sacD.reduce((s,r)=>s+r.parcela,0) + ent;
+  const priceTot = priceD.reduce((s,r)=>s+r.parcela,0) + ent;
+
+  /* Cards */
+  set('s1', fmt(sacD[0].parcela));
+  set('sn', fmt(sacD[sacD.length-1].parcela));
+  set('sj', fmt(sacJ));
+  set('st', fmt(sacTot));
+  set('sp', fmtM(sacD.length));
+
+  set('p1', fmt(priceD[0].parcela));
+  set('pj', fmt(priceJ));
+  set('pt', fmt(priceTot));
+  set('pp', fmtM(priceD.length));
+
+  /* Insight */
+  const diffJ  = Math.abs(priceJ - sacJ);
+  const diffPr = priceD.length - sacD.length;
+  let ins = `<strong>SAC economiza ${fmt(diffJ)} em juros</strong> comparado à PRICE`;
+  if (ex>0) ins += ` · Amortização extra de ${fmt(ex)}/mês aplicada`;
+  if (diffPr>0) ins += ` · SAC termina <strong>${fmtM(diffPr)} antes</strong>`;
+  document.getElementById('insBanner').innerHTML = ins;
+
+  buildConclusion(sacJ, priceJ, sacTot, priceTot, pv, i, n, ex);
+
+  document.getElementById('results').style.display = 'block';
+  page = 0;
+  renderTable();
+  renderChart(cType);
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ─── Conclusion ─── */
+function buildConclusion(sacJ, priceJ, sacTot, priceTot, pv, i, n, ex) {
+  const diffJ    = Math.abs(priceJ - sacJ);
+  const diffPct  = (diffJ / priceJ * 100).toFixed(1);
+  const sacFirst = sacD[0].parcela;
+  const priFirst = priceD[0].parcela;
+  const diffFirst = Math.abs(sacFirst - priFirst);
+  const diffPr   = Math.abs(sacD.length - priceD.length);
+
+  document.getElementById('cwin').innerHTML = sacJ <= priceJ
+    ? '✅ SAC é mais econômico no longo prazo'
+    : '✅ PRICE tem menor custo total neste cenário';
+
+  const items = [
+    `<strong>Custo total de juros:</strong> SAC = ${fmt(sacJ)} vs PRICE = ${fmt(priceJ)} — você paga <strong>${fmt(diffJ)} a menos (${diffPct}%)</strong> optando pelo SAC.`,
+    `<strong>Impacto no orçamento:</strong> A primeira parcela do SAC é ${fmt(sacFirst)}, enquanto na PRICE é ${fmt(priFirst)} — diferença de ${fmt(diffFirst)}. ${sacFirst > priFirst ? 'O SAC exige maior capacidade de pagamento no início, mas fica mais barato ao longo do tempo.' : 'Neste caso o PRICE começa mais pesado.'}`,
+    `<strong>Prazo efetivo:</strong> SAC termina em ${fmtM(sacD.length)}, PRICE em ${fmtM(priceD.length)}.${diffPr>0?' Diferença de '+fmtM(diffPr)+'.':' Mesmo prazo.'}`,
+    ex > 0
+      ? `<strong>Amortização extra de ${fmt(ex)}/mês:</strong> reduz prazo e juros em ambas as tabelas. No SAC o efeito é imediato — cada real amortizado reduz a base de cálculo dos juros no mês seguinte.`
+      : `<strong>Dica:</strong> adicione um valor no campo "amortização extra" para simular o impacto de pagamentos antecipados — é a estratégia mais eficiente para reduzir o custo do financiamento.`,
+    `<strong>Quando usar PRICE:</strong> quando a primeira parcela do SAC ultrapassa o limite de comprometimento de renda (geralmente 30%). A PRICE mantém a parcela estável, facilitando o planejamento mensal.`,
+  ];
+
+  document.getElementById('citems').innerHTML = items.map(t =>
+    `<div class="ci"><div class="dot"></div><span>${t}</span></div>`
+  ).join('');
+
+  document.getElementById('ctip').innerHTML = sacJ <= priceJ
+    ? `<strong>💡 Regra de ouro:</strong> No SAC, o saldo devedor cai mais rápido no início. Isso significa que amortizações extras feitas nos <em>primeiros anos</em> têm impacto exponencialmente maior que as feitas no final. Se puder pagar a parcela inicial mais alta, o SAC quase sempre será a melhor escolha financeira.`
+    : `<strong>💡 Dica prática:</strong> Independente da tabela, qualquer amortização extraordinária reduz o total de juros pagos. Priorize amortizar no início do contrato, quando o saldo devedor — e portanto os juros — são maiores.`;
+}
+
+/* ─── Chart ─── */
+function renderChart(type) {
+  if (chartInst) chartInst.destroy();
+  const maxL = Math.max(sacD.length, priceD.length);
+  const step = Math.max(1, Math.floor(maxL/100));
+  const labels=[], sv=[], pv2=[];
+  let sAcc=0, pAcc=0;
+
+  for (let idx=0; idx<maxL; idx+=step) {
+    labels.push('Mês '+(idx+1));
+    const s=sacD[idx], p=priceD[idx];
+    if (type==='saldo') {
+      sv.push(s ? +s.saldo.toFixed(2) : 0);
+      pv2.push(p ? +p.saldo.toFixed(2) : 0);
+    } else if (type==='parcela') {
+      sv.push(s ? +s.parcela.toFixed(2) : null);
+      pv2.push(p ? +p.parcela.toFixed(2) : null);
+    } else {
+      for (let j=idx; j<Math.min(idx+step,maxL); j++) {
+        if(sacD[j])   sAcc+=sacD[j].juros;
+        if(priceD[j]) pAcc+=priceD[j].juros;
+      }
+      sv.push(+sAcc.toFixed(2));
+      pv2.push(+pAcc.toFixed(2));
+    }
+  }
+
+  chartInst = new Chart(document.getElementById('mainChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label:'SAC',  data:sv,  borderColor:'#6c8fff', backgroundColor:'rgba(108,143,255,.09)', borderWidth:2, pointRadius:0, tension:.35, fill:true},
+        {label:'PRICE',data:pv2, borderColor:'#a78bfa', backgroundColor:'rgba(167,139,250,.07)', borderWidth:2, pointRadius:0, tension:.35, fill:true},
+      ]
+    },
+    options: {
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1b1f35',borderColor:'#252b47',borderWidth:1,
+          titleColor:'#e8eaf6',bodyColor:'#6b74a8',
+          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw||0)}`}
+        }
+      },
+      scales:{
+        x:{ticks:{color:'#6b74a8',font:{family:'JetBrains Mono',size:9},maxTicksLimit:10},grid:{color:'#1b1f35'}},
+        y:{ticks:{color:'#6b74a8',font:{family:'JetBrains Mono',size:9},callback:v=>'R$ '+(v/1000).toFixed(0)+'k'},grid:{color:'rgba(37,43,71,.5)'}}
+      }
+    }
+  });
+}
+
+function swChart(type, btn) {
+  cType=type;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart(type);
+}
+
+/* ─── Table ─── */
+function renderTable() {
+  const maxL=Math.max(sacD.length, priceD.length);
+  const start=page*PS, end=Math.min(start+PS, maxL);
+  const tb=document.getElementById('tBody');
+  tb.innerHTML='';
+  for (let idx=start; idx<end; idx++) {
+    const s=sacD[idx], p=priceD[idx];
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${idx+1}</td>
+      <td class="sv">${s?fmt(s.parcela):'—'}</td><td>${s?fmt(s.juros):'—'}</td><td>${s?fmt(s.amort):'—'}</td><td>${s?fmt(s.saldo):'—'}</td>
+      <td class="pv">${p?fmt(p.parcela):'—'}</td><td>${p?fmt(p.juros):'—'}</td><td>${p?fmt(p.amort):'—'}</td><td>${p?fmt(p.saldo):'—'}</td>`;
+    tb.appendChild(tr);
+  }
+  document.getElementById('pagInfo').textContent=`Exibindo ${start+1}–${end} de ${maxL} meses`;
+  document.getElementById('bPrev').disabled=page===0;
+  document.getElementById('bNext').disabled=end>=maxL;
+}
+function chPage(d){page+=d;renderTable();}
+
+/* ─── Auto-run ─── */
+window.addEventListener('load', ()=>setTimeout(calcular, 200));
+</script>
+</body>
+</html>

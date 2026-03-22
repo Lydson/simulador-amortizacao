@@ -189,7 +189,7 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--bdr);
     <div class="field">
       <label>Prazo (meses)</label>
       <input type="number" id="pz" value="420" min="12" max="420">
-      <div class="hint">Máx. MCMV: 360 meses (30 anos)</div>
+      <div class="hint">Máx. MCMV: 420 meses (35 anos)</div>
     </div>
     <div class="field">
       <label>Amortização extra/mês (R$)</label>
@@ -301,7 +301,7 @@ const set = (id, v) => document.getElementById(id).textContent = v;
 
 /* ─── Presets ─── */
 const PRESETS = {
-  mcmv:  {vi:200000, ent:40000,  ta:10.5,  pz:360, ex:0},
+  mcmv:  {vi:200000, ent:40000,  ta:10.5,  pz:420, ex:0},
   medio: {vi:350000, ent:80000,  ta:11.5,  pz:420, ex:0},
   alto:  {vi:900000, ent:180000, ta:11.5,  pz:420, ex:0},
 };
